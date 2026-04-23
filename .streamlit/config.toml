@@ -1,0 +1,16 @@
+[server]
+headless = true
+port = 8501
+enableCORS = false
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+# The deep navy and teal theme applied via Streamlit standard config 
+# as a fallback/baseline for the custom CSS
+primaryColor = "#38bdf8"
+backgroundColor = "#0b1120"
+secondaryBackgroundColor = "#101829"
+textColor = "#e2e8f0"
+font = "sans serif"
