@@ -54,12 +54,25 @@ def _get_gemini_client():
     """Initialize and return a Gemini GenerativeModel."""
     try:
         import google.generativeai as genai
-        api_key = st.secrets.get("gemini", {}).get("api_key") or st.secrets.get("GEMINI_API_KEY", "")
+
+        # Try multiple ways to read the key
+        api_key = ""
+        try:
+            api_key = st.secrets["gemini"]["api_key"]
+        except Exception:
+            pass
         if not api_key:
+            try:
+                api_key = st.secrets["GEMINI_API_KEY"]
+            except Exception:
+                pass
+
+        if not api_key or api_key == "YOUR_GEMINI_API_KEY_HERE":
             return None, "no_key"
+
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-2.5-flash",
             system_instruction=SYSTEM_PROMPT,
         )
         return model, "ok"
@@ -67,6 +80,7 @@ def _get_gemini_client():
         return None, "no_lib"
     except Exception as e:
         return None, str(e)
+
 
 
 def _chat_with_gemini(model, history: list, user_message: str) -> str:
