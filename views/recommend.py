@@ -1,11 +1,24 @@
+"""
+views/recommend.py
+------------------
+Career Recommendation page — requires authentication.
+Results are saved to the database per user.
+"""
+
 import streamlit as st
 from src.recommender import recommend
 from modules.input_module import get_student_input
 from modules.recommendation import recommend_domain
+from views.auth import require_login
+from database.models import save_recommendation
 
 
 def render():
     """Render the Career Recommendation page with the full 8-section questionnaire."""
+
+    # ── Auth gate ──────────────────────────────────────────────────────────────
+    if not require_login("Career Recommendations"):
+        return
 
     st.markdown("""
     <div class="page-header">
@@ -43,8 +56,20 @@ def render():
         st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
 
         # ── Best Career Match ──
-        top_job = list(career_results.keys())[0]
+        top_job   = list(career_results.keys())[0]
         top_score = list(career_results.values())[0]
+
+        # ── Save to DB ──
+        user = st.session_state.auth_user
+        try:
+            save_recommendation(
+                user_id=user["id"],
+                top_career=top_job,
+                top_score=top_score,
+                best_domain=best_domain,
+            )
+        except Exception:
+            pass  # DB write failure should not break the UI
 
         st.markdown(f"""
         <div class="best-match animate-fade-in-up">
@@ -118,15 +143,14 @@ def render():
             </h3>
             """, unsafe_allow_html=True)
 
-            # Best domain card
             domain_icons = {
                 "Engineering & Technology": "E&T",
-                "Medical & Healthcare": "M&H",
-                "Business & Management": "B&M",
-                "Creative & Design": "C&D",
-                "Arts & Humanities": "A&H",
-                "Science & Research": "S&R",
-                "Education & Social Work": "E&S",
+                "Medical & Healthcare":     "M&H",
+                "Business & Management":    "B&M",
+                "Creative & Design":        "C&D",
+                "Arts & Humanities":        "A&H",
+                "Science & Research":       "S&R",
+                "Education & Social Work":  "E&S",
             }
 
             st.markdown(f"""
@@ -143,7 +167,6 @@ def render():
             </div>
             """, unsafe_allow_html=True)
 
-            # Domain scores breakdown
             st.markdown("""
             <p style="font-size:0.88rem; color:#64748b; font-weight:600; margin-bottom:12px;">
                 Domain Scores
@@ -151,15 +174,12 @@ def render():
             """, unsafe_allow_html=True)
 
             max_score = max(domain_scores.values()) if max(domain_scores.values()) > 0 else 1
-
-            # Sort by score descending
             sorted_domains = sorted(domain_scores.items(), key=lambda x: x[1], reverse=True)
 
             for domain, score in sorted_domains:
                 pct = round((score / max_score) * 100)
                 is_best = domain == best_domain
                 bar_color = "#38bdf8" if is_best else "#0ea5e9"
-                abbr = domain_icons.get(domain, "?")
 
                 st.markdown(f"""
                 <div style="margin-bottom:10px;">
@@ -175,8 +195,9 @@ def render():
                 </div>
                 """, unsafe_allow_html=True)
 
-        # ── Tip ──
+        # ── Tip + save confirmation ──
         st.markdown("<br>", unsafe_allow_html=True)
+        st.success("✅ Result saved to your profile! View it under **Account → Your Profile**.")
         st.info(
             "**Tip:** Try changing your answers across different sections — "
             "your interests, skills, and personality all influence the results!"

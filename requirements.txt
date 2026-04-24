@@ -3,3 +3,4 @@ numpy
 scikit-learn
 streamlit
 google-generativeai
+bcrypt

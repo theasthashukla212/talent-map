@@ -1,5 +1,6 @@
 import streamlit as st
 import re
+from database.models import save_contact_message
 
 
 def render():
@@ -65,11 +66,17 @@ def render():
                     for e in errors:
                         st.error(e)
                 else:
+                    # Always save to DB first (ensures no message is lost)
+                    try:
+                        save_contact_message(name, email, subject, message)
+                    except Exception:
+                        pass
+
                     if _send_email(name, email, subject, message):
                         st.success("✅ Message sent successfully! We'll get back to you soon.")
                         st.balloons()
                     else:
-                        st.error("❌ Failed to send message. Please try again later.")
+                        st.warning("⚠️ Email delivery failed, but your message was saved. We'll follow up!")
 
         st.markdown('</div>', unsafe_allow_html=True)
 

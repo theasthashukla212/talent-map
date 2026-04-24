@@ -1,0 +1,4 @@
+# database package — initialise DB on first import
+from database.db import init_db
+
+init_db()

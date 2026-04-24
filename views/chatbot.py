@@ -1,4 +1,5 @@
 import streamlit as st
+from views.auth import require_login
 
 # ── System prompt that defines the chatbot personality ──
 SYSTEM_PROMPT = """You are an Intelligent Career Guidance Assistant inside a web app called "Talent Map".
@@ -101,6 +102,10 @@ def _chat_with_gemini(model, history: list, user_message: str) -> str:
 
 def render():
     """Render the AI Career Chatbot page."""
+
+    # ── Auth gate ──────────────────────────────────────────────────────────────
+    if not require_login("AI Career Assistant"):
+        return
 
     # ── Page Header ──
     st.markdown("""

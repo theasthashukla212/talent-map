@@ -14,19 +14,25 @@ css_path = Path(__file__).parent / "styles" / "main.css"
 if css_path.exists():
     st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
 
+# ── Initialise Database (creates tables if not exist) ──
+import database  # noqa: F401, E402  — triggers database/__init__.py → init_db()
+
 # ── Page Imports ──
 from views import home, about, contact, feedback, auth, recommend, chatbot  # noqa: E402
 
 # ── Page Registry ──
 PAGES = {
-    "Home": home,
+    "Home":            home,
     "🤖 AI Assistant": chatbot,
-    "Recommend": recommend,
-    "About": about,
-    "Contact": contact,
-    "Feedback": feedback,
-    "Account": auth,
+    "Recommend":       recommend,
+    "About":           about,
+    "Contact":         contact,
+    "Feedback":        feedback,
+    "Account":         auth,
 }
+
+# Pages that require a logged-in user (will show lock banner when accessed anonymously)
+PROTECTED_PAGES = {"Recommend", "🤖 AI Assistant", "Feedback"}
 
 # ── Sidebar Navigation ──
 with st.sidebar:
@@ -56,12 +62,29 @@ with st.sidebar:
     if "page" not in st.session_state:
         st.session_state.page = "Home"
 
-    st.radio(
+    # Build nav labels — add 🔒 indicator for protected pages when not logged in
+    is_authed = bool(st.session_state.get("auth_user"))
+
+    def _nav_label(name: str) -> str:
+        if name in PROTECTED_PAGES and not is_authed:
+            return f"{name}  🔒"
+        return name
+
+    page_names = list(PAGES.keys())
+    display_names = [_nav_label(n) for n in page_names]
+
+    # Map display label back to real page name on selection
+    selected_display = st.radio(
         "Navigate",
-        options=list(PAGES.keys()),
-        key="page",
+        options=display_names,
+        index=page_names.index(st.session_state.page),
         label_visibility="collapsed",
     )
+    # Strip the lock icon suffix if present
+    selected_page = selected_display.replace("  🔒", "")
+    if selected_page != st.session_state.page:
+        st.session_state.page = selected_page
+        st.rerun()
 
     st.markdown("---")
 
@@ -87,7 +110,10 @@ with st.sidebar:
     else:
         st.markdown("""
         <div style="text-align:center; padding:8px 0;">
-            <p style="color:#64748b; font-size:0.78rem;">Not signed in</p>
+            <p style="color:#64748b; font-size:0.78rem; margin:0 0 8px 0;">Not signed in</p>
+            <p style="color:#475569; font-size:0.72rem; margin:0;">
+                Sign in to unlock<br>Recommend &amp; AI features
+            </p>
         </div>
         """, unsafe_allow_html=True)
 

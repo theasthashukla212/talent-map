@@ -1,9 +1,21 @@
+"""
+views/feedback.py
+-----------------
+Feedback page — requires authentication.
+Submissions are persisted to SQLite so they survive server restarts.
+"""
+
 import streamlit as st
-from datetime import datetime
+from views.auth import require_login
+from database.models import save_feedback, get_all_feedback
 
 
 def render():
     """Render the Feedback page."""
+
+    # ── Auth gate ──────────────────────────────────────────────────────────────
+    if not require_login("Feedback"):
+        return
 
     st.markdown("""
     <div class="page-header">
@@ -22,10 +34,6 @@ def render():
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Initialize feedback storage ──
-    if "feedback_entries" not in st.session_state:
-        st.session_state.feedback_entries = []
-
     # ── Feedback Form ──
     col_form, col_gap, col_history = st.columns([3, 0.3, 2])
 
@@ -33,7 +41,6 @@ def render():
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
 
         with st.form("feedback_form", clear_on_submit=True):
-            # Star Rating
             st.markdown(
                 '<p style="color:#e2e8f0; font-weight:600; margin-bottom:4px;">Rate Your Experience</p>',
                 unsafe_allow_html=True,
@@ -46,7 +53,6 @@ def render():
                 label_visibility="collapsed",
             )
 
-            # Category
             category = st.selectbox("Category", [
                 "UI / UX Design",
                 "Career Recommendations",
@@ -56,13 +62,6 @@ def render():
                 "Other",
             ])
 
-            # Name (optional)
-            name = st.text_input(
-                "Your Name (optional)",
-                placeholder="Anonymous",
-            )
-
-            # Detailed Feedback
             comments = st.text_area(
                 "Your Feedback",
                 placeholder="Tell us what you liked, disliked, or what we can improve…",
@@ -77,29 +76,32 @@ def render():
                 if not comments.strip():
                     st.error("Please write some feedback before submitting.")
                 else:
-                    entry = {
-                        "name": name.strip() or "Anonymous",
-                        "rating": rating,
-                        "category": category,
-                        "comments": comments.strip(),
-                        "time": datetime.now().strftime("%b %d, %Y — %I:%M %p"),
-                    }
-                    st.session_state.feedback_entries.insert(0, entry)
-                    st.success("Thank you for your feedback!")
+                    user = st.session_state.auth_user
+                    save_feedback(
+                        rating=rating,
+                        category=category,
+                        comments=comments.strip(),
+                        user_id=user["id"],
+                        user_name=user["name"],
+                    )
+                    st.success("Thank you for your feedback! 🎉")
                     st.balloons()
+                    st.rerun()   # refresh to show new entry in history
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Recent Feedback ──
+    # ── Recent Feedback (from DB) ──
     with col_history:
         st.markdown("""
         <div class="glass-card" style="margin-bottom:16px;">
-            <h3 style="font-size:1.1rem !important; margin-bottom:4px;">Recent Feedback</h3>
-            <p style="font-size:0.8rem; color:#64748b;">Showing latest entries</p>
+            <h3 style="font-size:1.1rem !important; margin-bottom:4px;">Community Feedback</h3>
+            <p style="font-size:0.8rem; color:#64748b;">Persisted across sessions</p>
         </div>
         """, unsafe_allow_html=True)
 
-        if not st.session_state.feedback_entries:
+        entries = get_all_feedback(limit=10)
+
+        if not entries:
             st.markdown("""
             <div class="glass-card" style="text-align:center; padding:36px 16px;">
                 <div style="width:48px; height:48px; border-radius:14px;
@@ -112,13 +114,15 @@ def render():
             </div>
             """, unsafe_allow_html=True)
         else:
-            for entry in st.session_state.feedback_entries[:5]:
+            for entry in entries:
                 stars = "★" * entry["rating"] + "☆" * (5 - entry["rating"])
+                # Show only the date portion of the ISO timestamp
+                date_str = entry["created_at"][:10] if entry["created_at"] else ""
                 st.markdown(f"""
                 <div class="feedback-entry">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <strong style="color:#e2e8f0; font-size:0.92rem;">{entry["name"]}</strong>
-                        <span style="font-size:0.75rem; color:#64748b;">{entry["time"]}</span>
+                        <strong style="color:#e2e8f0; font-size:0.92rem;">{entry["user_name"]}</strong>
+                        <span style="font-size:0.75rem; color:#64748b;">{date_str}</span>
                     </div>
                     <div style="margin-bottom:6px; color:#38bdf8; font-size:0.85rem; letter-spacing:2px;">{stars}</div>
                     <span class="badge badge-accent" style="margin-bottom:8px;">{entry["category"]}</span>
