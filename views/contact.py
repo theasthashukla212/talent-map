@@ -65,17 +65,11 @@ def render():
                     for e in errors:
                         st.error(e)
                 else:
-                    # Store in session_state for demo purposes
-                    if "contact_messages" not in st.session_state:
-                        st.session_state.contact_messages = []
-                    st.session_state.contact_messages.append({
-                        "name": name,
-                        "email": email,
-                        "subject": subject,
-                        "message": message,
-                    })
-                    st.success("Message sent successfully! We'll get back to you soon.")
-                    st.balloons()
+                    if _send_email(name, email, subject, message):
+                        st.success("✅ Message sent successfully! We'll get back to you soon.")
+                        st.balloons()
+                    else:
+                        st.error("❌ Failed to send message. Please try again later.")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -85,7 +79,7 @@ def render():
             <h3>Contact Info</h3>
             <div style="margin-bottom:16px;">
                 <span class="info-label">Email</span>
-                <span class="info-value">talentmap@university.edu</span>
+                <span class="info-value">asthashukla2102@gmail.com</span>
             </div>
             <div style="margin-bottom:16px;">
                 <span class="info-label">Location</span>
@@ -109,3 +103,68 @@ def render():
             </p>
         </div>
         """, unsafe_allow_html=True)
+
+
+def _send_email(name: str, sender_email: str, subject: str, message: str) -> bool:
+    """Send contact form email via Gmail SMTP. Returns True on success."""
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    try:
+        cfg = st.secrets["email"]
+        smtp_user = cfg["sender_email"]
+        smtp_pass = cfg["sender_password"]
+        receiver  = cfg["receiver_email"]
+    except Exception:
+        st.warning("⚠️ Email config missing. Please add your Gmail App Password to `.streamlit/secrets.toml`.")
+        return False
+
+    # Build a nice HTML email
+    html_body = f"""
+    <html><body style="font-family:Arial,sans-serif; color:#1e293b;">
+      <h2 style="color:#0f172a;">📬 New Contact Form Submission — Talent Map</h2>
+      <table style="border-collapse:collapse; width:100%; max-width:600px;">
+        <tr>
+          <td style="padding:8px 12px; font-weight:bold; background:#f1f5f9; width:120px;">Name</td>
+          <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">{name}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 12px; font-weight:bold; background:#f1f5f9;">Email</td>
+          <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">{sender_email}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 12px; font-weight:bold; background:#f1f5f9;">Subject</td>
+          <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">{subject}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 12px; font-weight:bold; background:#f1f5f9; vertical-align:top;">Message</td>
+          <td style="padding:8px 12px; white-space:pre-wrap;">{message}</td>
+        </tr>
+      </table>
+      <hr style="margin-top:24px; border:none; border-top:1px solid #e2e8f0;">
+      <p style="font-size:12px; color:#94a3b8;">
+        This email was sent automatically from the Talent Map Contact Form.
+      </p>
+    </body></html>
+    """
+
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"]  = f"[Talent Map] {subject} — from {name}"
+        msg["From"]     = smtp_user
+        msg["To"]       = receiver
+        msg["Reply-To"] = sender_email
+        msg.attach(MIMEText(html_body, "html"))
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_user, receiver, msg.as_string())
+        return True
+
+    except smtplib.SMTPAuthenticationError:
+        st.error("🔐 Gmail authentication failed. Check your App Password in secrets.toml.")
+        return False
+    except Exception as exc:
+        st.error(f"Email sending error: {exc}")
+        return False

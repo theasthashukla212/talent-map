@@ -15,11 +15,12 @@ if css_path.exists():
     st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
 
 # ── Page Imports ──
-from views import home, about, contact, feedback, auth, recommend  # noqa: E402
+from views import home, about, contact, feedback, auth, recommend, chatbot  # noqa: E402
 
 # ── Page Registry ──
 PAGES = {
     "Home": home,
+    "🤖 AI Assistant": chatbot,
     "Recommend": recommend,
     "About": about,
     "Contact": contact,
