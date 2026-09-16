@@ -1,141 +1,123 @@
-# Talent Map
+# TalentMap
 
-Talent Map is a career recommendation system that helps students and individuals discover suitable career paths based on their interests, skills, and academic background. The system uses machine learning techniques, specifically cosine similarity, to match user profiles with job requirements from the O\*NET database.
+TalentMap is a **Streamlit-based career recommendation web app** that helps users discover occupations aligned with their skills, knowledge areas, and interests. It builds on the U.S. Department of Labor's **O*NET occupational database**, transforming raw skills/knowledge/interest data into similarity matrices that power personalized job/career suggestions, alongside a built-in chatbot assistant and user authentication.
 
 ## Features
 
-- **Career Recommendation**: Provides personalized job recommendations based on user input.
-- **Domain Scoring**: Offers domain recommendations (e.g., Engineering, Medical, Business) using a scoring system.
-- **Interactive Web App**: Built with Streamlit for easy user interaction.
-- **Data-Driven**: Utilizes O\*NET occupational data for accurate job matching.
-- **Modular Design**: Organized into modules for input handling, recommendations, and data processing.
+- **Personalized career recommendations** – users input their skills, knowledge, and interests; the app matches them against occupation profiles derived from O*NET data.
+- **Interactive multi-page UI** built with Streamlit, including Home, About, Recommend, Chatbot, Contact, and Feedback pages.
+- **AI chatbot assistant** to help users explore careers conversationally.
+- **User authentication** for a personalized session experience.
+- **Feedback collection** to continuously improve recommendation quality.
+- **Custom UI theming** via Streamlit config and CSS styling.
+
+## How It Works
+
+1. Raw O*NET reference files (`Skills.txt`, `Knowledge.txt`, `Interests.txt`, `Occupation Data.txt`) are processed by scripts in `src/` to build structured matrices:
+   - `build_knowledge_matrix.py`, `build_interest_Matrix.py`, `build_career_matrix.py`, and `build_matrix.py` generate CSV matrices (`job_knowledge_matrix.csv`, `interest_matrix.csv`, `career_matrix.csv`).
+   - `merge_titles.py` merges occupation titles into the matrices (`career_matrix_with_titles.csv`).
+2. `train_model.py` and `recommender.py` build and serve the recommendation logic on top of these matrices.
+3. The Streamlit app (`app.py`) loads the trained recommender and presents an interactive UI where users provide their profile (skills, knowledge, interests) via `modules/input_module.py`.
+4. `modules/recommendation.py` scores and ranks matching occupations, returning the closest career matches to the user.
+5. User data (accounts, feedback) is persisted in a local SQLite database (`talent_map.db`) via `database/db.py` and `database/models.py`.
 
 ## Project Structure
 
 ```
 talent-map/
-├── app.py                          # Main application entry point
-├── test_model.py                   # Test script for the recommendation model
-├── requirements.txt                # Python dependencies
-├── README.md                       # Project documentation
-├── data/                           # Data files
-│   ├── career_matrix.csv           # Merged career matrix
-│   ├── career_matrix_with_titles.csv # Career matrix with job titles
-│   ├── interest_matrix.csv         # Interest data
-│   ├── job_knowledge_matrix.csv    # Knowledge requirements
-│   ├── job_skill_matrix.csv        # Skill requirements
-│   └── *.txt                       # Raw data files
-├── modules/                        # Application modules
-│   ├── input_module.py             # User input handling (Streamlit)
-│   └── recommendation.py           # Domain recommendation logic
-└── src/                            # Source code for data processing
-    ├── build_career_matrix.py      # Builds the career matrix
-    ├── build_interest_Matrix.py    # Builds interest matrix
-    ├── build_knowledge_matrix.py   # Builds knowledge matrix
-    ├── build_matrix.py             # General matrix building
-    ├── merge_titles.py             # Merges job titles
-    ├── recommender.py              # Core recommendation engine
-    └── train_model.py              # Model training and normalization
+├── app.py                        # Streamlit application entry point
+├── requirements.txt              # Python dependencies
+├── talent_map.db                 # SQLite database (users, feedback, etc.)
+├── test_model.py                 # Script for testing the recommendation model
+├── .streamlit/
+│   └── config.toml               # Streamlit UI/theme configuration
+├── data/                         # O*NET source data and generated matrices
+│   ├── Skills.txt
+│   ├── Knowledge.txt
+│   ├── Interests.txt
+│   ├── Occupation Data.txt
+│   ├── career_matrix.csv
+│   ├── career_matrix_with_titles.csv
+│   ├── interest_matrix.csv
+│   ├── job_knowledge_matrix.csv
+│   └── job_skill_matrix.csv
+├── database/
+│   ├── db.py                     # Database connection/session handling
+│   └── models.py                 # ORM / schema models
+├── modules/
+│   ├── input_module.py           # Collects and validates user input
+│   └── recommendation.py         # Core recommendation scoring logic
+├── src/
+│   ├── build_career_matrix.py    # Builds the combined career matrix
+│   ├── build_interest_Matrix.py  # Builds the interest matrix
+│   ├── build_knowledge_matrix.py # Builds the knowledge matrix
+│   ├── build_matrix.py           # Shared matrix-building utilities
+│   ├── merge_titles.py           # Merges occupation titles into matrices
+│   ├── recommender.py            # Recommendation model/engine
+│   └── train_model.py            # Trains the recommendation model
+├── styles/                       # Custom CSS for the Streamlit UI
+└── views/
+    ├── home.py                   # Landing page
+    ├── about.py                  # About page
+    ├── auth.py                   # Login/signup handling
+    ├── chatbot.py                # AI chatbot assistant page
+    ├── recommend.py              # Career recommendation page
+    ├── feedback.py                # User feedback page
+    └── contact.py                # Contact page
 ```
 
-## Installation
+## Getting Started
 
-1. Clone the repository:
+### Prerequisites
 
-   ```bash
-   git clone <repository-url>
-   cd talent-map
-   ```
+- Python 3.8+
+- pip
 
-2. Create a virtual environment:
+### Installation
 
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+```bash
+git clone https://github.com/theasthashukla212/talent-map.git
+cd talent-map
+pip install -r requirements.txt
+```
 
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Usage
-
-### Running the Web App
-
-To start the interactive Streamlit application:
+### Running the App
 
 ```bash
 streamlit run app.py
 ```
 
-This will launch a web interface where users can:
+The app will start locally and open in your browser (by default at `http://localhost:8501`).
 
-- Select their academic stream (PCM, PCB, Commerce, Arts)
-- Choose their interests (Technology, Biology, Business, etc.)
-- Specify their strengths (Logical Thinking, Communication, etc.)
+### Rebuilding the Recommendation Matrices (optional)
 
-The app will then provide career and domain recommendations.
-
-### Using the Recommendation Engine
-
-You can also use the recommendation functions directly in Python:
-
-```python
-from app import recommend
-
-# Example user input (list of selected features)
-user_input = ['Mathematics', 'Physics', 'Technology']
-
-recommendations = recommend(user_input)
-print(recommendations)
-```
-
-### Building Data Matrices
-
-To rebuild the data matrices from raw O\*NET data:
+If you update the raw O*NET data in `data/`, regenerate the matrices before running the app:
 
 ```bash
+python src/build_knowledge_matrix.py
+python src/build_interest_Matrix.py
 python src/build_career_matrix.py
-python src/train_model.py  # For normalization
+python src/merge_titles.py
+python src/train_model.py
 ```
 
-## Data Sources
+### Testing the Model
 
-The project uses data from the O\*NET (Occupational Information Network) database, which provides comprehensive information about occupations, skills, knowledge, and interests required for various jobs.
+```bash
+python test_model.py
+```
 
-- **Skills Matrix**: Contains skill requirements for different occupations
-- **Knowledge Matrix**: Includes knowledge areas relevant to jobs
-- **Interest Matrix**: Maps Holland codes (RIASEC) to occupations
-- **Career Matrix**: Merged matrix combining all features
+## Tech Stack
 
-## Algorithms
-
-- **Cosine Similarity**: Used for matching user profiles with job requirements
-- **Normalization**: Min-Max scaling applied to features for better similarity computation
-- **Scoring System**: Rule-based scoring for domain recommendations
-
-## Dependencies
-
-- pandas: Data manipulation and analysis
-- numpy: Numerical computing
-- scikit-learn: Machine learning algorithms
-- streamlit: Web application framework
+- **Frontend/UI:** Streamlit
+- **Backend/Logic:** Python
+- **Database:** SQLite
+- **Data Source:** O*NET occupational database (Skills, Knowledge, Interests, Occupation Data)
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+Contributions are welcome. Please open an issue to discuss significant changes before submitting a pull request.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- O\*NET database for occupational data
-- Scikit-learn for machine learning tools
-- Streamlit for the web framework
+No license file is currently included in this repository. Please contact the repository owner for usage terms.
